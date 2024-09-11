@@ -1,0 +1,12 @@
+[package]
+name = "libsocks_client"
+version = "0.1.0"
+edition = "2021"
+authors = ["sujiacong <linfengfeiye@qq.com>"]
+description = "SOCKS client rust implementation,supporting SOCKS4,SOCKS4a,SOCKS5 protocols"
+license = "MIT"
+repository = "https://github.com/sujiacong/libsocks_client"
+
+[dependencies]
+tokio = { version = "1.39.3", features = ["full"] }
+async-trait = "0.1.82"
