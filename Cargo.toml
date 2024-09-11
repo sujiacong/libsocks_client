@@ -5,6 +5,8 @@ edition = "2021"
 authors = ["sujiacong <linfengfeiye@qq.com>"]
 description = "SOCKS client rust implementation,supporting SOCKS4,SOCKS4a,SOCKS5 protocols"
 license = "MIT"
+readme = "README.md"
+keywords = ["socks", "rust"]
 repository = "https://github.com/sujiacong/libsocks_client"
 
 [dependencies]
