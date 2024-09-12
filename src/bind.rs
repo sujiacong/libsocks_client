@@ -51,8 +51,13 @@ impl SocksBind for Client {
                 stream.read_exact(&mut response).await
                 .map_err(|e| SocksError::BindError(e.to_string()))?;
 
+                //the version of the reply code should be 0 in socks4.protocol
+                if response[0] != 0x00 {
+                    return Err(SocksError::BindError(format!("SOCKS4 bind request failed, error {}","the version of the reply code should be 0")));
+                }
+
                 if response[1] != 0x5A {
-                    return Err(SocksError::BindError(format!("SOCKS4 bind request failed, error {}",translate_socks4_error(response[1]))));
+                    return Err(SocksError::BindError(format!("SOCKS4 bind request failed, error {}:{}",response[1],translate_socks4_error(response[1]))));
                 }
 
                 //If the DSTIP in the reply is 0 (the value of constant INADDR_ANY), 
@@ -112,7 +117,7 @@ impl SocksBind for Client {
                 .map_err(|e| SocksError::BindError(e.to_string()))?;
 
                 if bind_response_header[0] != 0x05 || bind_response_header[1] != 0x00 {
-                    return Err(SocksError::BindError(format!("SOCKS5 BIND request failed, error {}",translate_socks5_error(bind_response_header[1]))));
+                    return Err(SocksError::BindError(format!("SOCKS5 BIND request failed, error {}:{}",bind_response_header[1],translate_socks5_error(bind_response_header[1]))));
                 }
 
                 let addr_type = bind_response_header[3];
@@ -196,16 +201,44 @@ impl SocksBind for Client {
     async fn accept(&mut self) -> Result<SocksTcpStream, SocksError>
     {
         match self {
-            Client::Socks4(inner) | Client::Socks4a(inner) | Client::Socks5(inner) => {
-                let mut second_bind_response_header: [u8; 10] = [0; 10];
-                let bindaddr = inner.bindaddr.take().ok_or(SocksError::BindError("accept not ready".into()))?;
+            Client::Socks4(inner) | Client::Socks4a(inner) => {
+                let bindaddr: SocketAddr = inner.bindaddr.take().ok_or(SocksError::BindError("accept not ready".into()))?;
                 let mut stream = inner.stream.take().ok_or(SocksError::BindError("accept not ready".into()))?;
-                let _ = stream.read(&mut second_bind_response_header[..]).await
+                let mut second_bind_response_header = [0; 8];
+                stream.read_exact(&mut second_bind_response_header).await
                 .map_err(|e| SocksError::BindError(e.to_string()))?;
+                //the version of the reply code should be 0 in socks4.protocol
+                if second_bind_response_header[0] != 0x00 {
+                    return Err(SocksError::BindError(format!("SOCKS4 bind request failed, error {}","the version of the reply code should be 0")));
+                }
+                if second_bind_response_header[1] != 0x5A {
+                    return Err(SocksError::BindError(format!("SOCKS4 bind request failed, error {}:{}",second_bind_response_header[1],translate_socks4_error(second_bind_response_header[1]))));
+                }
+                Ok(SocksTcpStream::new(stream, bindaddr))
+            }
+            Client::Socks5(inner) => {
+                let bindaddr: SocketAddr = inner.bindaddr.take().ok_or(SocksError::BindError("accept not ready".into()))?;
+                let mut stream = inner.stream.take().ok_or(SocksError::BindError("accept not ready".into()))?;
+                let mut second_bind_response_header = [0; 4];
+                stream.read_exact(&mut second_bind_response_header).await
+                .map_err(|e| SocksError::BindError(e.to_string()))?;
+
                 if second_bind_response_header[0] != 0x05 || second_bind_response_header[1] != 0x00
                 {
                     return Err(SocksError::BindError(format!("SOCKS5 BIND accept failed with code: {:02X}",second_bind_response_header[1])));
                 }
+
+                let addr_type = second_bind_response_header[3];
+                let mut bind_response = vec![0; match addr_type {
+                    SOCKS_ADDR_TYPE_IPV4 => 10,
+                    SOCKS_ADDR_TYPE_IPV6 => 22,
+                    _ => return Err(SocksError::BindError("Unsupported address type".into())),
+                }];
+
+                bind_response[..4].copy_from_slice(&second_bind_response_header);
+                stream.read_exact(&mut bind_response[4..]).await
+                .map_err(|e| SocksError::BindError(e.to_string()))?;
+
                 Ok(SocksTcpStream::new(stream, bindaddr))
             }
         }

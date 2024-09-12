@@ -82,7 +82,7 @@ pub struct SocksUdpSocket
 
 /// A trait for connecting to a target address through a SOCKS proxy.
 #[async_trait]
-pub trait SocksConnect {
+pub trait SocksConnect : Send + Sync {
     /// Connects to the specified target address and port through a SOCKS proxy.
     async fn connect(&mut self, target_addr:&str, target_port: u16) -> Result<SocksTcpStream,SocksError>;
     /// Connects to the specified target hostname and port through a SOCKS proxy.
@@ -91,7 +91,7 @@ pub trait SocksConnect {
 
 /// A trait for binding to a target address through a SOCKS proxy.
 #[async_trait]
-pub trait SocksBind {
+pub trait SocksBind : Send + Sync {
     /// Binds to the specified target address and port through a SOCKS proxy.
     /// If the client is not in possession of DST.ADDR and DST.PORT at the time the UDP ASSOCIATE request is create, 
     /// it MUST use a port number and address of all zeros.
@@ -104,7 +104,7 @@ pub trait SocksBind {
 
 /// A trait for associating a UDP socket through a SOCKS proxy.
 #[async_trait]
-pub trait SocksUdp {
+pub trait SocksUdp : Send + Sync {
     /// Associates a UDP socket to the specified target address and port through a SOCKS proxy.
     async fn udp_associate(&mut self, target_addr: &str, target_port: u16) -> Result<(), SocksError>;
     /// Gets the UDP socket associated with the SOCKS proxy.
