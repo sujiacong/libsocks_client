@@ -22,7 +22,7 @@ Add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-libsocks_client = "0.1.0"
+libsocks_client = "0.1.2"
 ```
 
 ## Usage
@@ -52,13 +52,37 @@ async fn main() {
 To connect to a target address through the SOCKS proxy use local dns lookup:
 
 ```rust
-let mut stream = client.connect("www.example.com", 80).await.unwrap();
+    const HTTP_REQUEST: &str = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nConnection: close\r\n\r\n";
+    let mut stream = client.connect("www.baidu.com", 80).await?;
+    stream.write_all(&HTTP_REQUEST.as_bytes()).await?;
+    let mut buf = vec![0; 1024];
+    let mut response_buffer = vec![];
+    loop {
+        let n = stream.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        response_buffer.extend(&buf[..n]);
+    }
+    println!("Response: {}", String::from_utf8_lossy(&response_buffer));
 ```
 
 To connect to a target domain through the SOCKS proxy use remote dns lookup:
 
 ```rust
-let mut stream = client.connect_hostname("www.example.com", 80).await.unwrap();
+    const HTTP_REQUEST: &str = "GET / HTTP/1.1\r\nHost: www.baidu.com\r\nConnection: close\r\n\r\n";
+    let mut stream = client.connect_hostname("www.baidu.com", 80).await?;
+    stream.write_all(&HTTP_REQUEST.as_bytes()).await?;
+    let mut buf = vec![0; 1024];
+    let mut response_buffer = vec![];
+    loop {
+        let n = stream.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        response_buffer.extend(&buf[..n]);
+    }
+    println!("Response: {}", String::from_utf8_lossy(&response_buffer));
 ```
 
 ### Binding to a Target Address

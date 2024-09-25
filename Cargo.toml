@@ -1,6 +1,6 @@
 [package]
 name = "libsocks_client"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["sujiacong <linfengfeiye@qq.com>"]
 description = "SOCKS client rust implementation,supporting SOCKS4,SOCKS4a,SOCKS5 protocols"

@@ -1,11 +1,11 @@
 //! # Utils Module
 //!
 //! This module provides utility functions for parsing target addresses and building/unpacking UDP packets.
-use tokio::io;
-use std::str::FromStr;
-use std::net::SocketAddr;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::*;
+use std::net::SocketAddr;
+use std::str::FromStr;
+use tokio::io;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 /// Represents the target host type.
 pub(crate) enum TargetHost {
@@ -48,8 +48,7 @@ pub(crate) fn parse_target_address(addr: &str) -> io::Result<(TargetHost, u16)> 
 /// # Returns
 ///
 /// A `Result` containing the built UDP packet if successful, or an `io::Error` if an error occurs.
-pub(crate) fn build_udp_packet(data: &[u8], target_addr:&str) -> io::Result<Vec<u8>> {
-
+pub(crate) fn build_udp_packet(data: &[u8], target_addr: &str) -> io::Result<Vec<u8>> {
     let (target_addr, target_port) = parse_target_address(target_addr)?;
 
     let mut packet = match target_addr {
@@ -64,20 +63,20 @@ pub(crate) fn build_udp_packet(data: &[u8], target_addr:&str) -> io::Result<Vec<
 
     match target_addr {
         TargetHost::Ipv4(addr) => {
-            packet[3] = 0x01; // ATYP: IPv4
+            packet[3] = SOCKS_ADDR_TYPE_IPV4;
             packet[4..8].copy_from_slice(&addr.octets());
             packet[8..10].copy_from_slice(&target_port.to_be_bytes());
             packet[10..].copy_from_slice(data);
         }
         TargetHost::Ipv6(addr) => {
-            packet[3] = 0x04; // ATYP: IPv6
+            packet[3] = SOCKS_ADDR_TYPE_IPV6;
             packet[4..20].copy_from_slice(&addr.octets());
             packet[20..22].copy_from_slice(&target_port.to_be_bytes());
             packet[22..].copy_from_slice(data);
         }
         TargetHost::Domain(ref domain) => {
             let domain_len = domain.len();
-            packet[3] = 0x03; // ATYP: Domain
+            packet[3] = SOCKS_ADDR_TYPE_DOMAIN;
             packet[4] = domain_len as u8;
             packet[5..5 + domain_len].copy_from_slice(domain.as_bytes());
             packet[5 + domain_len..7 + domain_len].copy_from_slice(&target_port.to_be_bytes());
@@ -98,24 +97,15 @@ pub(crate) fn build_udp_packet(data: &[u8], target_addr:&str) -> io::Result<Vec<
 /// # Returns
 ///
 /// A `Result` containing the unpacked data and the sender's address if successful, or an `io::Error` if an error occurs.
-pub (crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAddr, Vec<u8>)>
-{
-    if n < 4
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            "packet size too small",
-        ));
+pub(crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAddr, Vec<u8>)> {
+    if n < 4 {
+        return Err(io::Error::new(io::ErrorKind::Other, "packet size too small"));
     }
     let atyp = data[3];
     match atyp {
-        0x01 => {
-            if n < 10
-            {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "packet size too small",
-                ));
+        SOCKS_ADDR_TYPE_IPV4 => {
+            if n < 10 {
+                return Err(io::Error::new(io::ErrorKind::Other, "packet size too small"));
             }
             let ip = [data[4], data[5], data[6], data[7]];
             let port = u16::from_be_bytes([data[8], data[9]]);
@@ -123,17 +113,13 @@ pub (crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAdd
             let data = data[10..n].to_vec();
             Ok((dst_addr, data))
         }
-        0x04 => {
-            if n < 22
-            {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "packet size too small",
-                ));
+        SOCKS_ADDR_TYPE_IPV6 => {
+            if n < 22 {
+                return Err(io::Error::new(io::ErrorKind::Other, "packet size too small"));
             }
             let ip = [
-                data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11],
-                data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19],
+                data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16],
+                data[17], data[18], data[19],
             ];
             let port = u16::from_be_bytes([data[20], data[21]]);
             let dst_addr = SocketAddr::from((ip, port));
@@ -141,10 +127,7 @@ pub (crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAdd
             Ok((dst_addr, data))
         }
         _ => {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Unsupported address type",
-            ));
+            return Err(io::Error::new(io::ErrorKind::Other, "Unsupported address type"));
         }
     }
 }
@@ -171,33 +154,47 @@ pub (crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAdd
 /// - If the proxy server selects an unsupported authentication method.
 /// - If the authentication with the proxy server fails.
 /// - If the username or password is missing when required.
-pub (crate) async fn socks5_authenticate(stream: &mut TcpStream, inner: &SocksClientInner) -> Result<(), SocksError> {
-    let auth_methods = vec![0x05, 0x02, SOCKS5_AUTH_NONE, SOCKS5_AUTH_USERNAME_PASSWORD];
-    stream.write_all(&auth_methods).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+pub(crate) async fn socks5_authenticate(stream: &mut TcpStream, inner: &mut SocksClientInner) -> Result<(), SocksError> {
+    let mut auth_methods = vec![0x05];
+    if inner.username.is_some() && inner.password.is_some() {
+        auth_methods.push(0x02);
+        auth_methods.push(SOCKS5_AUTH_NONE);
+        auth_methods.push(SOCKS5_AUTH_USERNAME_PASSWORD);
+    } else {
+        auth_methods.push(0x01);
+        auth_methods.push(SOCKS5_AUTH_NONE);
+    }
+
+    stream.write_all(&auth_methods).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
 
     let mut auth_negotiation = [0; 2];
-    stream.read_exact(&mut auth_negotiation).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
-
-    let mut auth_response = [0; 2];
+    stream.read_exact(&mut auth_negotiation).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
 
     if auth_negotiation[1] == SOCKS5_AUTH_USERNAME_PASSWORD {
         let username = inner.username.as_ref().ok_or(SocksError::AuthenticationError("missing username".into()))?;
         let password = inner.password.as_ref().ok_or(SocksError::AuthenticationError("missing password".into()))?;
 
-        let mut auth_request = vec![0x01];
+        inner.buf.clear();
+        let auth_request = &mut inner.buf;
+
+        auth_request.extend_from_slice(&[0x01]);
         auth_request.push(username.len() as u8);
         auth_request.extend_from_slice(&username.as_bytes());
         auth_request.push(password.len() as u8);
         auth_request.extend_from_slice(&password.as_bytes());
 
-        stream.write_all(&auth_request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
-        stream.read_exact(&mut auth_response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+        stream.write_all(&auth_request).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
+
+        inner.buf.resize(2, 0);
+        let mut auth_response = &mut inner.buf;
+
+        stream.read_exact(&mut auth_response).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
 
         if auth_response[1] != 0x00 {
             return Err(SocksError::AuthenticationError(format!("SOCKS5 authentication failed with method: {:02X}", auth_response[1])));
         }
     } else if auth_negotiation[1] != 0x00 {
-        return Err(SocksError::AuthenticationError(format!("SOCKS5 authentication failed with method: {:02X}", auth_response[1])));
+        return Err(SocksError::AuthenticationError(format!("SOCKS5 authentication failed with method: {:02X}", auth_negotiation[1])));
     }
 
     Ok(())
