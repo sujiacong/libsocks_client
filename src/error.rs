@@ -25,6 +25,7 @@ pub(crate) fn translate_socks4_error(err_code: u8) -> &'static str {
 }
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum SocksError {
     AuthenticationError(String),
     ConnectionError(String),

@@ -1,7 +1,7 @@
+#![allow(non_snake_case)]
 use crate::error::*;
 use crate::utils::*;
 use crate::*;
-#[allow(non_snake_case)]
 use async_trait::async_trait;
 use std::net::{SocketAddr, ToSocketAddrs};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -55,7 +55,7 @@ impl SocksUdp for Client {
                 }
 
                 udp_associate_request.extend_from_slice(&target_port.to_be_bytes());
-                stream.write_all(&udp_associate_request).await.map_err(|e| SocksError::UdpAssociateError(e.to_string()))?;
+                stream.write_all(udp_associate_request).await.map_err(|e| SocksError::UdpAssociateError(e.to_string()))?;
 
                 inner.buf.resize(22, 0);
 

@@ -83,17 +83,9 @@ pub struct SocksUdpSocket {
 #[async_trait]
 pub trait SocksConnect: Send + Sync {
     /// Connects to the specified target address and port through a SOCKS proxy.
-    async fn connect(
-        &mut self,
-        target_addr: &str,
-        target_port: u16,
-    ) -> Result<SocksTcpStream, SocksError>;
+    async fn connect(&mut self, target_addr: &str, target_port: u16) -> Result<SocksTcpStream, SocksError>;
     /// Connects to the specified target hostname and port through a SOCKS proxy.
-    async fn connect_hostname(
-        &mut self,
-        target_addr: &str,
-        target_port: u16,
-    ) -> Result<SocksTcpStream, SocksError>;
+    async fn connect_hostname(&mut self, target_addr: &str, target_port: u16) -> Result<SocksTcpStream, SocksError>;
 }
 
 /// A trait for binding to a target address through a SOCKS proxy.
@@ -113,11 +105,7 @@ pub trait SocksBind: Send + Sync {
 #[async_trait]
 pub trait SocksUdp: Send + Sync {
     /// Associates a UDP socket to the specified target address and port through a SOCKS proxy.
-    async fn udp_associate(
-        &mut self,
-        target_addr: &str,
-        target_port: u16,
-    ) -> Result<(), SocksError>;
+    async fn udp_associate(&mut self, target_addr: &str, target_port: u16) -> Result<(), SocksError>;
     /// Gets the UDP socket associated with the SOCKS proxy.
     async fn get_udp_socket(&mut self, bind_addr: &str) -> Result<SocksUdpSocket, SocksError>;
 }
@@ -125,12 +113,7 @@ pub trait SocksUdp: Send + Sync {
 impl SocksClientBuilder {
     /// Creates a new `SocksClientBuilder` with the specified proxy IP and port.
     pub fn new(proxyip: &str, proxyport: u16) -> Self {
-        Self {
-            proxy_addr: format!("{}:{}", proxyip, proxyport),
-            username: None,
-            password: None,
-            version: None,
-        }
+        Self { proxy_addr: format!("{}:{}", proxyip, proxyport), username: None, password: None, version: None }
     }
 
     /// Sets the username for authentication.
@@ -224,10 +207,7 @@ impl SocksClientBuilder {
 impl SocksTcpStream {
     /// Creates a new `SocksTcpStream` with the specified TCP stream and bound address.
     pub fn new(stream: TcpStream, addr: SocketAddr) -> Self {
-        SocksTcpStream {
-            inner: stream,
-            bindaddr: addr,
-        }
+        SocksTcpStream { inner: stream, bindaddr: addr }
     }
     /// Gets the bound address from the SOCKS proxy.
     pub fn get_proxy_bind_addr(&mut self) -> SocketAddr {
@@ -236,11 +216,7 @@ impl SocksTcpStream {
 }
 
 impl AsyncWrite for SocksTcpStream {
-    fn poll_write(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &[u8],
-    ) -> Poll<io::Result<usize>> {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
         Pin::new(&mut self.inner).poll_write(cx, buf)
     }
 
@@ -254,11 +230,7 @@ impl AsyncWrite for SocksTcpStream {
 }
 
 impl AsyncRead for SocksTcpStream {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
-    ) -> Poll<io::Result<()>> {
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<io::Result<()>> {
         Pin::new(&mut self.inner).poll_read(cx, buf)
     }
 }
@@ -272,9 +244,7 @@ mod test {
     use tokio::net::TcpStream;
     #[tokio::test]
     async fn test_socks4_connect() {
-        let mut client = SocksClientBuilder::new("10.206.118.40", 1080)
-            .socks4()
-            .build_tcp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.40", 1080).socks4().build_tcp_client();
         let mut stream = client.connect("110.242.68.3", 80).await.unwrap();
         stream.write_all(HTTP_REQUEST.as_bytes()).await.unwrap();
         let mut buf = vec![0; 1024];
@@ -291,9 +261,7 @@ mod test {
 
     #[tokio::test]
     async fn test_socks4a_connect() {
-        let mut client = SocksClientBuilder::new("10.206.118.122", 1080)
-            .socks4a()
-            .build_tcp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.122", 1080).socks4a().build_tcp_client();
         let mut stream = client.connect("110.242.68.3", 80).await.unwrap();
         stream.write_all(HTTP_REQUEST.as_bytes()).await.unwrap();
         let mut buf = vec![0; 1024];
@@ -310,9 +278,7 @@ mod test {
 
     #[tokio::test]
     async fn test_socks4a_hostname_connect() {
-        let mut client = SocksClientBuilder::new("10.206.118.122", 1080)
-            .socks4a()
-            .build_tcp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.122", 1080).socks4a().build_tcp_client();
         let mut stream = client.connect_hostname("www.baidu.com", 80).await.unwrap();
         stream.write_all(HTTP_REQUEST.as_bytes()).await.unwrap();
         let mut buf = vec![0; 1024];
@@ -329,9 +295,7 @@ mod test {
 
     #[tokio::test]
     async fn test_socks5_connect() {
-        let mut client = SocksClientBuilder::new("10.206.118.40", 1080)
-            .socks5()
-            .build_tcp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.40", 1080).socks5().build_tcp_client();
         let mut stream = client.connect("110.242.68.3", 80).await.unwrap();
         stream.write_all(HTTP_REQUEST.as_bytes()).await.unwrap();
         let mut buf = vec![0; 1024];
@@ -348,9 +312,7 @@ mod test {
 
     #[tokio::test]
     async fn test_socks5_connect_hostname() {
-        let mut client = SocksClientBuilder::new("10.206.118.40", 1080)
-            .socks5()
-            .build_tcp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.40", 1080).socks5().build_tcp_client();
         let mut stream = client.connect_hostname("www.baidu.com", 80).await.unwrap();
         stream.write_all(HTTP_REQUEST.as_bytes()).await.unwrap();
         let mut buf = vec![0; 1024];
@@ -367,9 +329,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bind() {
-        let mut client = SocksClientBuilder::new("10.206.118.40", 1080)
-            .socks5()
-            .build_listen_client();
+        let mut client = SocksClientBuilder::new("10.206.118.40", 1080).socks5().build_listen_client();
         let target_ip = "0.0.0.0";
         let target_port = 80;
         client.bind(target_ip, target_port).await.unwrap();
@@ -387,14 +347,10 @@ mod test {
     #[tokio::test]
     async fn test_udp() {
         const UDP_DATA: &str = "ABCDEFG";
-        let mut client = SocksClientBuilder::new("10.206.118.40", 1080)
-            .socks5()
-            .build_udp_client();
+        let mut client = SocksClientBuilder::new("10.206.118.40", 1080).socks5().build_udp_client();
         client.udp_associate("0.0.0.0", 0).await.unwrap();
         let udp = client.get_udp_socket("0.0.0.0:0").await.unwrap();
-        udp.send_udp_data(UDP_DATA.as_bytes(), "10.206.118.122:5553")
-            .await
-            .unwrap();
+        udp.send_udp_data(UDP_DATA.as_bytes(), "10.206.118.122:5553").await.unwrap();
         let data = udp.recv_udp_data(5).await.unwrap();
         assert!(data.1.eq(UDP_DATA.as_bytes()));
     }

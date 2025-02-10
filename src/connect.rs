@@ -49,11 +49,11 @@ impl SocksConnect for Client {
                 request.extend_from_slice(&ipv4.ip().octets());
                 request.extend_from_slice(&username);
                 request.push(0x00);
-                stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 inner.buf.resize(8, 0);
-                let mut response = &mut inner.buf;
-                stream.read_exact(&mut response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                let response = &mut inner.buf;
+                stream.read_exact(response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 if response[0] == 0x00 && response[1] == 0x5A {
                     let bind_ip = format!("{}.{}.{}.{}", response[4], response[5], response[6], response[7]);
@@ -102,12 +102,12 @@ impl SocksConnect for Client {
                 request.extend_from_slice(ipv4.ip().to_string().as_bytes());
                 request.push(0x00);
 
-                stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 inner.buf.resize(8, 0);
-                let mut response = &mut inner.buf;
+                let response = &mut inner.buf;
 
-                stream.read_exact(&mut response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                stream.read_exact(response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 if response[0] == 0x00 && response[1] == 0x5A {
                     let bind_ip = format!("{}.{}.{}.{}", response[4], response[5], response[6], response[7]);
@@ -145,14 +145,14 @@ impl SocksConnect for Client {
                         request.extend_from_slice(&addr4.ip().octets());
                         request.extend_from_slice(&target.port().to_be_bytes());
 
-                        stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                        stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
                     }
                     SocketAddr::V6(addr6) => {
                         request.extend_from_slice(&[0x05, SOCKS_CMD_CONNECT, 0x00, SOCKS_ADDR_TYPE_IPV6]);
                         request.extend_from_slice(&addr6.ip().octets());
                         request.extend_from_slice(&target.port().to_be_bytes());
 
-                        stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                        stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
                     }
                 };
 
@@ -235,14 +235,14 @@ impl SocksConnect for Client {
                 request.extend_from_slice(&[0, 0, 0, 1]);
                 request.extend_from_slice(&username);
                 request.push(0x00);
-                request.extend_from_slice(&targetaddr.as_bytes());
+                request.extend_from_slice(targetaddr.as_bytes());
                 request.push(0x00);
 
-                stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 inner.buf.resize(8, 0);
-                let mut response = &mut inner.buf;
-                stream.read_exact(&mut response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                let response = &mut inner.buf;
+                stream.read_exact(response).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 if response[0] == 0x00 && response[1] == 0x5a {
                     let bind_ip = format!("{}.{}.{}.{}", response[4], response[5], response[6], response[7]);
@@ -269,10 +269,10 @@ impl SocksConnect for Client {
 
                 request.extend_from_slice(&[0x05, SOCKS_CMD_CONNECT, 0x00, SOCKS_ADDR_TYPE_DOMAIN]);
                 request.push(target_addr.len() as u8);
-                request.extend_from_slice(&target_addr.as_bytes());
+                request.extend_from_slice(target_addr.as_bytes());
                 request.extend_from_slice(&target_port.to_be_bytes());
 
-                stream.write_all(&request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
+                stream.write_all(request).await.map_err(|e| SocksError::ConnectionError(e.to_string()))?;
 
                 inner.buf.resize(22, 0);
                 let response = &mut inner.buf;

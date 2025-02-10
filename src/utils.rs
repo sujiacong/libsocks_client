@@ -127,7 +127,7 @@ pub(crate) fn unpack_udp_packet(data: &[u8], n: usize) -> io::Result<(SocketAddr
             Ok((dst_addr, data))
         }
         _ => {
-            return Err(io::Error::new(io::ErrorKind::Other, "Unsupported address type"));
+            Err(io::Error::new(io::ErrorKind::Other, "Unsupported address type"))
         }
     }
 }
@@ -179,16 +179,16 @@ pub(crate) async fn socks5_authenticate(stream: &mut TcpStream, inner: &mut Sock
 
         auth_request.extend_from_slice(&[0x01]);
         auth_request.push(username.len() as u8);
-        auth_request.extend_from_slice(&username.as_bytes());
+        auth_request.extend_from_slice(username.as_bytes());
         auth_request.push(password.len() as u8);
-        auth_request.extend_from_slice(&password.as_bytes());
+        auth_request.extend_from_slice(password.as_bytes());
 
-        stream.write_all(&auth_request).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
+        stream.write_all(auth_request).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
 
         inner.buf.resize(2, 0);
-        let mut auth_response = &mut inner.buf;
+        let auth_response = &mut inner.buf;
 
-        stream.read_exact(&mut auth_response).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
+        stream.read_exact(auth_response).await.map_err(|e| SocksError::AuthenticationError(e.to_string()))?;
 
         if auth_response[1] != 0x00 {
             return Err(SocksError::AuthenticationError(format!("SOCKS5 authentication failed with method: {:02X}", auth_response[1])));

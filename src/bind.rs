@@ -44,11 +44,11 @@ impl SocksBind for Client {
                 request.extend_from_slice(&username);
                 request.push(0x00);
 
-                stream.write_all(&request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
+                stream.write_all(request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
 
                 inner.buf.resize(8, 0);
-                let mut response = &mut inner.buf;
-                stream.read_exact(&mut response).await.map_err(|e| SocksError::BindError(e.to_string()))?;
+                let response = &mut inner.buf;
+                stream.read_exact(response).await.map_err(|e| SocksError::BindError(e.to_string()))?;
 
                 //the version of the reply code should be 0 in socks4.protocol
                 if response[0] != 0x00 {
@@ -102,13 +102,13 @@ impl SocksBind for Client {
                         request.extend_from_slice(&[0x05, SOCKS_CMD_BIND, 0x00, SOCKS_ADDR_TYPE_IPV4]);
                         request.extend_from_slice(&addr.octets());
                         request.extend_from_slice(&target_port.to_be_bytes());
-                        stream.write_all(&request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
+                        stream.write_all(request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
                     }
                     IpAddr::V6(addr) => {
                         request.extend_from_slice(&[0x05, SOCKS_CMD_BIND, 0x00, SOCKS_ADDR_TYPE_IPV6]);
                         request.extend_from_slice(&addr.octets());
                         request.extend_from_slice(&target_port.to_be_bytes());
-                        stream.write_all(&request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
+                        stream.write_all(request).await.map_err(|e| SocksError::BindError(e.to_string()))?;
                     }
                 }
 
