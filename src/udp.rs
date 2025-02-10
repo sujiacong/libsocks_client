@@ -197,7 +197,7 @@ impl SocksUdpSocket {
     ///
     /// A `Result` containing the received data and the sender's address if successful, or a `SocksError` if an error occurs.
     pub async fn recv_udp_data(&self, tm: u64) -> Result<(SocketAddr, Vec<u8>), SocksError> {
-        let mut buf = vec![0; 2048];
+        let mut buf = vec![0; 65535];
         match timeout(Duration::from_secs(tm), self.inner.recv(&mut buf[..])).await {
             Ok(result) => match result {
                 Ok(len) => {
